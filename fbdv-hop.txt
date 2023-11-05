@@ -1,0 +1,375 @@
+import openpyxl
+import numpy as np
+import pandas as pd
+import math
+import random
+from openpyxl import load_workbook
+import xlsxwriter
+test_title = np.zeros((53,3),int)
+kongzhiqi = np.zeros((16,4),int)
+for i in range(0,9): 
+    test_title[i][0] = 100 + i*50
+    test_title[i][1] = 30
+    test_title[i][2] = 100
+for i in range(9,18): 
+    test_title[i][0] = 150
+    test_title[i][1] = 10 + 10*(i-9)
+    test_title[i][2] = 100
+for i in range(18,31): 
+    test_title[i][0] = 150
+    test_title[i][1] = 30
+    test_title[i][2] = 100 + 25*(i-18)
+for i in range(31,41):
+    test_title[i][0] = 50 + 50 + 50 *(i-31)
+    test_title[i][1] = 50/test_title[i][0]*100
+    test_title[i][2] = 100
+for i in range(41,53):
+    test_title[i][0] = 25 + 25*(i-41) + 100
+    test_title[i][1] = (25 + 25*(i-41))/test_title[i][0]*100
+    test_title[i][2] = 100
+for i in range(0,16):
+    a = i
+    for j in range(0,4):
+        b = a%2
+        a = a//2
+        kongzhiqi[i][j]=b
+#print(test_title)
+#print(kongzhiqi)
+
+
+mul_time = 100
+arrnum=53
+for ttn in range(0,arrnum):
+    total_node = test_title[ttn][0]
+    beacon_percent = round(0.01 * test_title[ttn][1], 2)
+    commu_range = test_title[ttn][2]
+    excelname1 = str(str(ttn+1)+'jiedianshu' + str(total_node) + '-xinbiaobili'+str(beacon_percent)+'-tongxinbanjing'+str(commu_range)+'.xlsx')
+    workbook1 = xlsxwriter.Workbook(excelname1)    
+    for i in range(0,mul_time):
+        sheetname1 = str('sheet'+str(i+1))
+        worksheet1 = workbook1.add_worksheet(sheetname1)  
+        worksheet1.write_row('A1','xu')
+        worksheet1.write_row('B1','heng')
+        worksheet1.write_row('C1','zong')
+        worksheet1.write_row('D1','biao')
+    workbook1.close() 
+
+    excelname2 = str(str(ttn+1)+'huizong-jiedianshu' + str(total_node) + '-xinbiaobili'+str(beacon_percent)+'-tongxinbanjing'+str(commu_range)+'.xlsx')
+    workbook2 = xlsxwriter.Workbook(excelname2) 
+    for k in range(0,2): 
+        sheetname2 = str('Sheet'+str(k+1))
+        worksheet2 = workbook2.add_worksheet(sheetname2)
+        worksheet2.write_row('A1','zuxuhao')
+    workbook2.close()
+
+x_length = 500
+y_length = 500
+
+def duishu(ligi):
+    if ligi <= 1:
+        fanhui = 0.0001
+    else:
+        fanhui = np.log10(ligi)
+    if math.isnan(fanhui) == True:
+        fanhui = 0.0001
+    if math.isinf(fanhui) == True:
+        fanhui = 0.0001
+    return fanhui
+
+for ttn in range(0,arrnum):
+    total_node = test_title[ttn][0]
+    beacon_percent = round(0.01 * test_title[ttn][1], 2)
+    commu_range = test_title[ttn][2]
+    
+    for ti in range(0,mul_time):        
+        beacon_node = int(total_node * beacon_percent)
+        unknown_node = int(total_node - beacon_node)
+        node_array = np.zeros((total_node,3),dtype = int)
+        beacon_array = np.zeros((beacon_node,5),dtype = int)
+        unknown_array = np.zeros((unknown_node,4),dtype = int)
+        hops_num = np.zeros((total_node, total_node))
+        distance = np.zeros((total_node, total_node))
+        hops_before = np.zeros((total_node, total_node))
+        appr_dis = np.zeros((unknown_node,beacon_node),int)
+        distance_commu = np.zeros((total_node, total_node))
+        re_label = 1
+        re = 0
+        while re_label != 0:
+            re += 1
+            re_label = 0
+            for j in range(0,total_node): 
+                x_axis = random.randrange(0,x_length)
+                y_axis = random.randrange(0,y_length)
+                node_array[j][0] = x_axis
+                node_array[j][1] = y_axis
+                if j <beacon_node:
+                    node_array[j][2] = 1
+                    beacon_array[j][0]=node_array[j][0]
+                    beacon_array[j][1]=node_array[j][1]
+                    beacon_array[j][2]=1
+                else:
+                    node_array[j][2] = 0
+                    unknown_array[j-beacon_node][0]=node_array[j][0]
+                    unknown_array[j-beacon_node][1]=node_array[j][1]
+                    unknown_array[j-beacon_node][2]=0
+
+            for i in range(0,total_node): 
+                for j in range(0,total_node):
+                    if i == j:
+                        hops_num[i][j] = 0
+                        distance[i][j] = 0
+                    else:
+                        distance[i][j] = ((node_array[i][0] - node_array[j][0]) ** 2 + (node_array[i][1] - node_array[j][1]) ** 2) ** 0.5
+                        if distance[i][j] <= commu_range:
+                            hops_num[i][j] = 1
+                        else:
+                            hops_num[i][j] = float("inf")
+                    distance_commu[i][j] = distance[i][j]
+                    
+            biaoji = 1
+            while biaoji != 0:
+                biaoji = 0
+                for i in range(0,total_node):
+                    for j in range(0,total_node):
+                        for k in range(0,total_node):
+                            if (hops_num[i][k]+hops_num[k][j]) < hops_num[i][j]:
+                                hops_num[i][j] = hops_num[i][k]+hops_num[k][j]
+                                biaoji += 1
+                                distance_commu[i][j] = distance_commu[i][k] + distance_commu[k][j]
+
+            for xx in range(0,total_node):
+                for yy in range(0,total_node):
+                    if (xx != yy) & (hops_num[xx][yy] == 0):
+                        re_label += 1
+                    if math.isinf(hops_num[xx][yy]) == True:
+                        re_label += 1
+        print(re)
+        print('NO.'+str(ttn+1)+'canshu-N0.'+str(ti+1)+'shengcheng')
+
+        
+        for i in range(0,beacon_node):
+            dist_sum = 0
+            hop_sum = 0
+            for j in range(0,beacon_node):
+                dist_sum += distance[i][j]
+                hop_sum += hops_num[i][j]
+            beacon_array[i][2] = dist_sum / hop_sum
+        print('NO.'+str(ttn+1)+'canshu-NO.'+str(ti+1)+'ready')
+        
+        
+        #打开存储文件
+        excelname1 = str(str(ttn+1)+'huizong-jiedianshu' + str(total_node) + '-xinbiaobili'+str(beacon_percent)+'-tongxinbanjing'+str(commu_range)+'.xlsx')
+        workbook1 = xlsxwriter.Workbook(excelname1)     
+
+        wb1 = openpyxl.load_workbook(excelname1)
+        sheet1 = wb1['Sheet1']
+        sheet2 = wb1['Sheet2']
+        sheet1.cell(row=ti+2, column=1).value = ti+1
+        sheet2.cell(row=ti+2, column=1).value = ti+1
+        
+        
+        excelname = str(str(ttn+1)+'jiedianshu' + str(total_node) + '-xinbiaobili'+str(beacon_percent)+'-tongxinbanjing'+str(commu_range)+'.xlsx')
+        workbook = xlsxwriter.Workbook(excelname)       
+        wb = openpyxl.load_workbook(excelname) 
+        sheetname = str('sheet'+str(ti+1)) 
+        sheet = wb[sheetname]
+        
+        for j in range(0,total_node):
+            sheet.cell(row=j+2, column=1).value = j+1
+            sheet.cell(row=j+2, column=2).value = node_array[j][0]
+            sheet.cell(row=j+2, column=3).value = node_array[j][1]
+            sheet.cell(row=j+2, column=4).value = node_array[j][2]
+        
+        
+        for kongzhi in range(0,16):
+            #kongzhi-pingjuntiaojuxiuzheng
+            if kongzhiqi[kongzhi][0] == 0:
+                for i in range(0,beacon_node):
+                    beacon_array[i][3] = beacon_array[i][2]
+            else:
+                for i in range(0,beacon_node):
+                    taosum = 0
+                    hopsum = 0
+                    for j in range(0,beacon_node):
+                        if i != j:
+                            taosum += abs(beacon_array[i][2] * hops_num[i][j] - distance[i][j])
+                            hopsum += hops_num[i][j]   
+                    beacon_array[i][3] = beacon_array[i][2] + 0.4 * taosum/hopsum  
+                    
+            #shifouxiuzheng
+            if kongzhiqi[kongzhi][1] == 0:
+                for i in range(0,unknown_node):
+                    min_hop = float("inf")
+                    min_hop_dis = float("inf")
+                    min_hop_disdis = float("inf")        
+                    for j in range(0,beacon_node):
+                        if min_hop_disdis > distance_commu[i+beacon_node][j]:
+                            min_hop = hops_num[i+beacon_node][j]                  
+                            min_hop_dis = beacon_array[j][3]
+                            min_hop_disdis = distance_commu[i+beacon_node][j]
+                    use_hop_dis = min_hop_dis
+                    for j in range(0,beacon_node):
+                        appr_dis[i][j] = use_hop_dis * hops_num[i+beacon_node][j]
+            else:
+                for i in range(0,unknown_node):
+                    for j in range(0,beacon_node):
+                        appr_dis[i][j] = beacon_array[j][3] * hops_num[i+beacon_node][j]
+            if ttn<18 or tnn>30:
+                point_hop = 2
+            else:
+                point_hop = 1
+            
+            A = np.zeros((beacon_node-1,2))
+            BB = np.zeros((beacon_node-1,1))
+            B = np.zeros((beacon_node-1,1))
+            for i in range(beacon_node, total_node):
+                k = i - beacon_node
+                D = np.zeros((beacon_node-1,beacon_node-1))
+                for j in range(0,beacon_node-1):
+                    A[j][0] = 2 * (beacon_array[j][0]-beacon_array[beacon_node-1][0])
+                    A[j][1] = 2 * (beacon_array[j][1]-beacon_array[beacon_node-1][1])
+                    B[j][0] = (beacon_array[j][0] ** 2) - (beacon_array[beacon_node-1][0] ** 2 ) + (beacon_array[j][1] ** 2) - (beacon_array[beacon_node-1][1] ** 2 )+ (appr_dis[k][beacon_node-1] ** 2) - (appr_dis[k][j] ** 2)
+
+                #quanzhongjuzheng
+                if kongzhiqi[kongzhi][2] == 0:
+                    for j in range(0,beacon_node-1):
+                        D[j][j] = 1
+                elif ttn<26 or tnn>30:
+                    RSSIR = 1/duishu(commu_range)
+                    RSSI = RSSIR
+                    dihop = 0
+                    for j in range(0,beacon_node):  
+                        if hops_num[i][j] <= point_hop:
+                            RSSI += 1/duishu(appr_dis[k][j])
+                        else:
+                            dihop += 1/hops_num[i][j]        
+                          
+                    if hops_num[i][beacon_node-1] <= point_hop:
+                        apupu = (1/duishu(appr_dis[k][beacon_node-1])) / RSSI
+                    else:
+                        apupu = ((1/hops_num[i][beacon_node-1])/dihop)* RSSIR/ RSSI
+                    if math.isnan(apupu) == True:
+                        apupu = 0.0001
+                    if math.isinf(apupu) == True:
+                        apupu = 0.0001
+                   
+                    for j in range(0,beacon_node-1):
+                        if hops_num[i][j] <= point_hop:
+                            D[j][j] = (1/duishu(appr_dis[k][j])) / RSSI
+                        else:
+                            D[j][j] = ((1/ hops_num[i][j])/dihop)* RSSIR/ RSSI
+                        if math.isnan(D[j][j]) == True:
+                            D[j][j] = 0.0001
+                        if math.isinf(D[j][j]) == True:
+                            D[j][j] = 0.0001
+                        D[j][j] = D[j][j] + apupu
+                else:
+                    RSSI = 0
+                    dihop = 0
+                    for j in range(0,beacon_node):  
+                        if hops_num[i][j] <= point_hop:
+                            RSSI += duishu(appr_dis[k][j])
+                        else:
+                            dihop += hops_num[i][j]        
+                            
+                    if hops_num[i][beacon_node-1] <= point_hop:
+                        apupu = duishu(appr_dis[k][beacon_node-1]) / RSSI
+                    else:
+                        apupu = hops_num[i][beacon_node-1]/dihop
+                    if math.isnan(apupu) == True:
+                        apupu = 0.0001
+                    if math.isinf(apupu) == True:
+                        apupu = 0.0001
+                   
+                    for j in range(0,beacon_node-1):
+                        if hops_num[i][j] <= point_hop:
+                            D[j][j] = duishu(appr_dis[k][j]) / RSSI
+                        else:
+                            D[j][j] = hops_num[i][j]/dihop
+                        if math.isnan(D[j][j]) == True:
+                            D[j][j] = 0.0001
+                        if math.isinf(D[j][j]) == True:
+                            D[j][j] = 0.0001
+                        D[j][j] = D[j][j] + apupu
+                
+                ATA = np.transpose(A)
+                C1 = np.dot(ATA,D)
+                C = np.dot(C1,A)
+                C_C = np.linalg.inv(C)
+                CAT = np.dot(C_C,ATA)
+                X1 = np.dot(CAT,D)
+                X = np.dot(X1,B)
+                unknown_array[k][2] = X[0][0]
+                unknown_array[k][3] = X[1][0]
+                
+                
+                if kongzhiqi[kongzhi][3] == 0:
+                    deltbiao = 0
+                else:
+                    deltbiao = 5
+                
+                while deltbiao != 0:
+                    deltbiao = deltbiao - 1
+                    axidi = 0
+                    ayi2 = 0
+                    ayidi =0
+                    axiayi = 0
+                    axi2 =0        
+                    for j in range(0,beacon_node):
+                        dex = unknown_array[k][2]-beacon_array[j][0]
+                        dey = unknown_array[k][3]-beacon_array[j][1]
+                        dii = (dex ** 2 + dey ** 2) ** 0.5
+                        di = dii - appr_dis[k][j]
+                        if dex == 0:
+                            axi = 0
+                        else:
+                            axi = -dex / dii
+                        if dey ==0:
+                            ayi = 0
+                        else:
+                            ayi = -dey / dii
+                        axidi += axi * di
+                        ayidi += ayi * di
+                        axi2 += axi * axi
+                        ayi2 += ayi * ayi
+                        axiayi += axi * ayi
+                    delt_x = (axidi * ayi2 - ayidi * axiayi) / (axi2 * ayi2 - axiayi * axiayi)
+                    delt_y = (ayidi * axi2 - axidi * axiayi) / (axi2 * ayi2 - axiayi * axiayi)
+                    if delt_x != delt_x:
+                        delt_x = 0
+                    if delt_y != delt_y:
+                        delt_y = 0
+                    unknown_array[k][2] += delt_x
+                    unknown_array[k][3] += delt_y                
+                
+            sum_error = 0
+            sum_rmse = 0
+            for i in range(0,unknown_node):
+                error_k = (unknown_array[i][0] - unknown_array[i][2]) ** 2 + (unknown_array[i][1] - unknown_array[i][3]) ** 2
+                sum_rmse += error_k
+                sum_error += (error_k) ** 0.5
+            error_avg = sum_error/(unknown_node * commu_range)
+            rmse = (sum_error/unknown_node) ** 0.5
+        
+            
+            sheet.cell(row=1, column=6 + 3*kongzhi).value = 'N0.'+str(kongzhi+1)   
+
+            #向excel中写入对应的value
+            sheet.cell(row=2, column=6 + 3*kongzhi).value = 'pingjunwucha'
+            sheet.cell(row=3, column=6 + 3*kongzhi).value = error_avg
+            sheet.cell(row=2, column=7 + 3*kongzhi).value = "RMSE"
+            sheet.cell(row=3, column=7 + 3*kongzhi).value = rmse
+
+            if ti==0:
+                sheet1.cell(row=ti+1, column=2+kongzhi).value = 'NO.'+str(kongzhi+1)
+                sheet2.cell(row=ti+1, column=2+kongzhi).value = 'NO.'+str(kongzhi+1)
+            sheet1.cell(row=ti+2, column=2+kongzhi).value = error_avg
+            sheet2.cell(row=ti+2, column=2+kongzhi).value = rmse
+
+            for ni in range(0,unknown_node):
+                sheet.cell(row=beacon_node+2+ni, column=6 + 3*kongzhi).value = unknown_array[ni][2]
+                sheet.cell(row=beacon_node+2+ni, column=7 + 3*kongzhi).value = unknown_array[ni][3]        
+        
+        wb.save(excelname)
+        wb1.save(excelname1)
+        print('NO.'+str(ttn+1)+'cnashu-NO.'+str(ti+1)+'test-save') 
